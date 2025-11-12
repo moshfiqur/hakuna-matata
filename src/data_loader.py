@@ -118,15 +118,38 @@ class EnterpriseDataLoader:
         # Make a copy to avoid modifying original
         processed_df = df.copy()
         
-        # Convert date columns to datetime
-        date_columns = [col for col in processed_df.columns 
-                       if any(keyword in col.lower() for keyword in ['date', 'time'])]
+        # Convert date columns to datetime - be more specific about what constitutes a date column
+        date_columns = []
+        for col in processed_df.columns:
+            col_lower = col.lower()
+            # Only consider columns that explicitly indicate they contain dates
+            if any(keyword in col_lower for keyword in ['date', 'time', 'timestamp', 'year', 'month', 'day']):
+                # Exclude columns that are clearly not dates (like "overtime")
+                if not any(exclude in col_lower for exclude in ['overtime', 'parttime', 'fulltime']):
+                    date_columns.append(col)
         
         for col in date_columns:
             try:
+                # Skip if column is already datetime
+                if pd.api.types.is_datetime64_any_dtype(processed_df[col]):
+                    continue
+                    
+                # Remove deprecated infer_datetime_format parameter
                 processed_df[col] = pd.to_datetime(processed_df[col], errors='coerce')
-            except:
-                pass  # Keep as string if conversion fails
+                
+                # Check if conversion was successful (more than 50% of values converted)
+                non_null_count = processed_df[col].notna().sum()
+                total_count = len(processed_df[col])
+                
+                if non_null_count == 0 or (non_null_count / total_count) < 0.5:
+                    self.logger.warning(f"Could not parse dates in column: {col} (only {non_null_count}/{total_count} converted), keeping as string")
+                    processed_df[col] = df[col]  # Restore original values
+                else:
+                    self.logger.info(f"Successfully parsed datetime column: {col} ({non_null_count}/{total_count} values converted)")
+                    
+            except Exception as e:
+                self.logger.warning(f"Could not convert column {col} to datetime: {e}")
+                # Keep as original if conversion fails
         
         # Clean column names
         processed_df.columns = [col.strip().replace(' ', '_').lower() for col in processed_df.columns]
