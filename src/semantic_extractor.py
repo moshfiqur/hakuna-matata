@@ -1,4 +1,8 @@
-"""Column semantics extractor.
+"""
+Column semantics extractor.
+
+Sample command:
+python src/semantic_extractor.py data/pavansubhasht/ibm-hr-analytics-attrition-dataset/WA_Fn-UseC_-HR-Employee-Attrition.csv --dataset-name ibm-hr-analytics-attrition-dataset --output-dir output/column_semantics --sample-size 5 --log-level INFO
 
 Reads a CSV file, infers per-column metadata, and writes the semantics to
 ``output/column_semantics/<dataset>.csv`` for downstream consumption.
@@ -153,7 +157,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--sample-size",
         type=int,
-        default=5,
+        default=10,
         help="Number of sample values to store for each column.",
     )
     parser.add_argument(
