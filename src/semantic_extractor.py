@@ -5,7 +5,13 @@ writes the semantics to ``output/column_semantics/<dataset>.csv`` for downstream
 consumption.
 
 Sample command:
-python src/semantic_extractor.py data/pavansubhasht/ibm-hr-analytics-attrition-dataset/WA_Fn-UseC_-HR-Employee-Attrition.csv --dataset-name ibm-hr-analytics-attrition-dataset --output-dir output/column_semantics --sample-size 5 --log-level INFO
+python src/semantic_extractor.py data/pavansubhasht/ibm-hr-analytics-attrition-dataset/WA_Fn-UseC_-HR-Employee-Attrition.csv \
+    --dataset-name ibm-hr-analytics-attrition-dataset \
+    --output-dir output/column_semantics \
+    --sample-size 5 \
+    --model-name valhalla/distilbart-mnli-12-1 \
+    --confidence-threshold 0.5 \
+    --log-level INFO
 """
 
 from __future__ import annotations
