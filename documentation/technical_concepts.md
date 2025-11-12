@@ -1,8 +1,8 @@
-# Enterprise-DNA: Technical Concept Overview
+# Business Intelligence: Technical Concept Overview
 
 ## 1. Real-Life Use Cases (Business Benefits)
 
-| Industry             | Example Problem                                                                                 | Solution by Enterprise-DNA                                                       | Tangible Benefit                       |
+| Industry             | Example Problem                                                                                 | Solution by Business Intelligence                                                       | Tangible Benefit                       |
 | -------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------- |
 | 🏭 **Manufacturing** | Data scattered across SAP, Excel, and supplier DBs — no view of how downtime affects deliveries | Integrates all data, shows correlation between machine downtime and order delays | Faster response, fewer late deliveries |
 | 🛍️ **Retail**       | Separate data for online/offline sales and marketing                                            | Links both to find product trends and campaign performance                       | Better targeting, higher sales         |
