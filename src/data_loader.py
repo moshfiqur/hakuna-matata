@@ -1,18 +1,17 @@
 """
 Data Loader for Enterprise Datasets
-Handles loading and preprocessing of enterprise data from various sources
+Handles loading enterprise datasets from Kaggle
 """
 
 import pandas as pd
-import numpy as np
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 from kaggle.api.kaggle_api_extended import KaggleApi
 
 class EnterpriseDataLoader:
     """
-    Loads enterprise datasets from various sources (Kaggle, local files, etc.)
+    Loads enterprise datasets from Kaggle
     """
     
     def __init__(self, data_dir: str = "data"):
@@ -24,7 +23,7 @@ class EnterpriseDataLoader:
         # Create data directory if it doesn't exist
         os.makedirs(data_dir, exist_ok=True)
 
-    def load_kaggle_dataset(self, dataset_name: str, custom_filename: str = None, file_pattern: str = None) -> pd.DataFrame:
+    def load_kaggle_dataset(self, dataset_name: str, custom_filename: str = None) -> pd.DataFrame:
         """
         Load dataset from Kaggle with custom filename support and download checks
         """
@@ -36,7 +35,7 @@ class EnterpriseDataLoader:
                     self.logger.info(f"File already exists: {target_file}")
                     return pd.read_csv(target_file)
             
-            # Download dataset only if no custom file exists or custom file doesn't exist
+            # Download dataset only if no custom file exists
             self.kaggle_api.dataset_download_files(
                 dataset_name, 
                 path=self.data_dir, 
@@ -46,9 +45,6 @@ class EnterpriseDataLoader:
             # Find the downloaded files
             files = os.listdir(self.data_dir)
             csv_files = [f for f in files if f.endswith('.csv')]
-            
-            if file_pattern:
-                csv_files = [f for f in csv_files if file_pattern in f]
             
             if not csv_files:
                 raise FileNotFoundError(f"No CSV files found in {self.data_dir}")
@@ -70,115 +66,24 @@ class EnterpriseDataLoader:
             self.logger.error(f"Error loading Kaggle dataset {dataset_name}: {e}")
             raise
     
-    def load_sample_hr_data(self) -> pd.DataFrame:
-        """
-        Load sample HR data for testing
-        """
-        return pd.DataFrame({
-            'employee_id': [101, 102, 103, 104, 105],
-            'emp_name': ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson'],
-            'department': ['Engineering', 'Marketing', 'Engineering', 'HR', 'Sales'],
-            'salary_amount': [75000, 65000, 80000, 55000, 70000],
-            'hire_date': ['2020-01-15', '2019-03-20', '2021-06-10', '2018-11-05', '2020-02-14'],
-            'performance_rating': [4, 3, 5, 3, 4],
-            'attendance_days': [240, 235, 245, 230, 242]
-        })
-    
-    def load_sample_sales_data(self) -> pd.DataFrame:
-        """
-        Load sample sales data for testing
-        """
-        return pd.DataFrame({
-            'transaction_id': [1001, 1002, 1003, 1004, 1005],
-            'customer_name': ['ABC Corp', 'XYZ Ltd', 'Global Inc', 'Tech Solutions', 'Innovate Co'],
-            'product_category': ['Software', 'Hardware', 'Services', 'Software', 'Hardware'],
-            'sales_amount': [15000, 25000, 18000, 22000, 19000],
-            'transaction_date': ['2023-01-15', '2023-01-16', '2023-01-17', '2023-01-18', '2023-01-19'],
-            'region': ['North', 'South', 'East', 'West', 'North'],
-            'sales_rep': ['Sarah Chen', 'Mike Johnson', 'Lisa Wang', 'David Kim', 'Sarah Chen']
-        })
-    
-    def load_sample_finance_data(self) -> pd.DataFrame:
-        """
-        Load sample finance data for testing
-        """
-        return pd.DataFrame({
-            'invoice_number': ['INV001', 'INV002', 'INV003', 'INV004', 'INV005'],
-            'vendor_name': ['Office Supplies Inc', 'Tech Equipment Co', 'Software Solutions', 'Consulting Services', 'Marketing Agency'],
-            'invoice_amount': [1500.50, 7500.00, 12000.75, 8500.25, 3200.00],
-            'due_date': ['2023-02-15', '2023-02-20', '2023-02-25', '2023-03-01', '2023-03-05'],
-            'payment_status': ['Paid', 'Pending', 'Overdue', 'Paid', 'Pending'],
-            'cost_center': ['IT', 'Operations', 'R&D', 'Consulting', 'Marketing']
-        })
-    
-    def preprocess_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Preprocess the dataframe for semantic analysis
-        """
-        # Make a copy to avoid modifying original
-        processed_df = df.copy()
-        
-        # Convert date columns to datetime - be more specific about what constitutes a date column
-        date_columns = []
-        for col in processed_df.columns:
-            col_lower = col.lower()
-            # Only consider columns that explicitly indicate they contain dates
-            if any(keyword in col_lower for keyword in ['date', 'time', 'timestamp', 'year', 'month', 'day']):
-                # Exclude columns that are clearly not dates (like "overtime")
-                if not any(exclude in col_lower for exclude in ['overtime', 'parttime', 'fulltime']):
-                    date_columns.append(col)
-        
-        for col in date_columns:
-            try:
-                # Skip if column is already datetime
-                if pd.api.types.is_datetime64_any_dtype(processed_df[col]):
-                    continue
-                    
-                # Remove deprecated infer_datetime_format parameter
-                processed_df[col] = pd.to_datetime(processed_df[col], errors='coerce')
-                
-                # Check if conversion was successful (more than 50% of values converted)
-                non_null_count = processed_df[col].notna().sum()
-                total_count = len(processed_df[col])
-                
-                if non_null_count == 0 or (non_null_count / total_count) < 0.5:
-                    self.logger.warning(f"Could not parse dates in column: {col} (only {non_null_count}/{total_count} converted), keeping as string")
-                    processed_df[col] = df[col]  # Restore original values
-                else:
-                    self.logger.info(f"Successfully parsed datetime column: {col} ({non_null_count}/{total_count} values converted)")
-                    
-            except Exception as e:
-                self.logger.warning(f"Could not convert column {col} to datetime: {e}")
-                # Keep as original if conversion fails
-        
-        # Clean column names
-        processed_df.columns = [col.strip().replace(' ', '_').lower() for col in processed_df.columns]
-        
-        return processed_df
-    
-    
     def get_enterprise_datasets(self) -> Dict[str, pd.DataFrame]:
         """
-        Get multiple enterprise datasets for semantic analysis with custom file naming
+        Get multiple enterprise datasets from Kaggle
+        Downloads datasets and saves with custom filenames
         """
         datasets = {}
         
-        # Load sample datasets
-        datasets['hr_data'] = self.preprocess_data(self.load_sample_hr_data())
-        datasets['sales_data'] = self.preprocess_data(self.load_sample_sales_data())
-        datasets['finance_data'] = self.preprocess_data(self.load_sample_finance_data())
-        
-        # Try to load real datasets from Kaggle if available with custom filenames
+        # Kaggle datasets to download with custom filenames
         kaggle_datasets = [
-            ('pavansubhasht/ibm-hr-analytics-attrition-dataset', 'hr_analytics', 'hr_employee_attrition.csv'),
-            # ('rohanrao/sales-data-for-forecasting', 'sales_forecasting', 'sales_forecasting_data.csv'),
-            # ('nelgiriyewithana/global-superstore-dataset', 'superstore_sales', 'global_superstore.csv')
+            # ('pavansubhasht/ibm-hr-analytics-attrition-dataset', 'hr_analytics', 'hr_employee_attrition.csv'),
+            # ('aslanahmedov/walmart-sales-forecast', 'sales_forecasting', 'warlmart_sales_forecasting_data.csv'), # this dataset contains 4 files: features.csv, stores.csv, test.csv, train.csv
+            ('rohitsahoo/sales-forecasting', 'superstore_sales', 'global_superstore_sales_dataset.csv')
         ]
         
         for dataset_name, dataset_key, custom_filename in kaggle_datasets:
             try:
                 df = self.load_kaggle_dataset(dataset_name, custom_filename)
-                datasets[dataset_key] = self.preprocess_data(df)
+                datasets[dataset_key] = df
                 self.logger.info(f"Successfully loaded Kaggle dataset: {dataset_name} as {custom_filename}")
             except Exception as e:
                 self.logger.warning(f"Could not load Kaggle dataset {dataset_name}: {e}")
@@ -189,7 +94,7 @@ class EnterpriseDataLoader:
 if __name__ == "__main__":
     loader = EnterpriseDataLoader()
     
-    # Load sample datasets
+    # Load datasets
     datasets = loader.get_enterprise_datasets()
     
     print("Available datasets:")
